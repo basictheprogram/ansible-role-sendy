@@ -1,0 +1,96 @@
+---
+# molecule/default/molecule.yml
+# Default scenario: happy-path upgrade across the full OS matrix.
+#
+# Images: geerlingguy's systemd-enabled Ansible images.
+# Check https://github.com/geerlingguy/docker-*-ansible for latest tags.
+# Update image names here if a platform's image is not yet published.
+
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: debian-12
+    image: ghcr.io/geerlingguy/docker-debian12-ansible:latest
+    command: /lib/systemd/systemd
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    pre_build_image: true
+
+  - name: debian-13
+    image: ghcr.io/geerlingguy/docker-debian13-ansible:latest
+    command: /lib/systemd/systemd
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    pre_build_image: true
+
+  - name: ubuntu-2204
+    image: ghcr.io/geerlingguy/docker-ubuntu2204-ansible:latest
+    command: /lib/systemd/systemd
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    pre_build_image: true
+
+  - name: ubuntu-2404
+    image: ghcr.io/geerlingguy/docker-ubuntu2404-ansible:latest
+    command: /lib/systemd/systemd
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    pre_build_image: true
+
+  - name: ubuntu-2604
+    image: ghcr.io/geerlingguy/docker-ubuntu2604-ansible:latest
+    command: /lib/systemd/systemd
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callbacks_enabled: profile_tasks
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+  inventory:
+    host_vars:
+      debian-12:
+        ansible_python_interpreter: /usr/bin/python3
+      debian-13:
+        ansible_python_interpreter: /usr/bin/python3
+      ubuntu-2204:
+        ansible_python_interpreter: /usr/bin/python3
+      ubuntu-2404:
+        ansible_python_interpreter: /usr/bin/python3
+      ubuntu-2604:
+        ansible_python_interpreter: /usr/bin/python3
+
+verifier:
+  name: testinfra
+  directory: tests/
+  options:
+    v: true
+    tb: short
+
+scenario:
+  test_sequence:
+    - dependency
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - destroy

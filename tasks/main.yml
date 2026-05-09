@@ -1,0 +1,16 @@
+---
+# tasks/main.yml
+# Entry point — runs preflight, backup, then deploy in order.
+# OS patching is handled by a separate role/playbook.
+
+- name: "Preflight checks"
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [sendy, sendy_preflight]
+
+- name: "Backup live config files"
+  ansible.builtin.import_tasks: backup.yml
+  tags: [sendy, sendy_backup]
+
+- name: "Deploy Sendy upgrade"
+  ansible.builtin.import_tasks: deploy.yml
+  tags: [sendy, sendy_deploy]

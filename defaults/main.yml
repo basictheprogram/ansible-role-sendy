@@ -1,0 +1,63 @@
+---
+# defaults/main.yml
+# Public interface for the sendy_upgrade role.
+# All variables can be overridden in host_vars, group_vars, or with -e.
+#
+# Required variables (no sensible default — must be set in host_vars):
+#   sendy_zip_src          — path to the Sendy zip on the Ansible control node
+#   sendy_smoke_test_url   — full URL to verify after deploy
+
+# ── Installation ──────────────────────────────────────────────────────────
+
+# Absolute path to the live Sendy web root on the remote host.
+sendy_install_dir: /var/www/html/sendy
+
+# System user and group that owns the web server process.
+sendy_web_user: www-data
+sendy_web_group: www-data
+
+# ── Zip source ────────────────────────────────────────────────────────────
+
+# Full path to the Sendy zip ON the Ansible control node.
+# Mount the Synology share first, then set this in host_vars:
+#
+#   sendy_zip_src: /mnt/synology_sendy/sendy.zip
+#
+sendy_zip_src: ""
+
+# ── Staging ───────────────────────────────────────────────────────────────
+
+# Temp directory on the remote host for extracting the new build.
+# Created at start of deploy and removed at end.
+sendy_staging_dir: /tmp/sendy_upgrade
+
+# ── Backup ────────────────────────────────────────────────────────────────
+
+# Parent directory for timestamped backups on the remote host.
+# Each run creates a subdirectory named by ISO 8601 timestamp.
+sendy_backup_dir: /var/backups/sendy
+
+# ── File preservation ─────────────────────────────────────────────────────
+
+# Keep the live .htaccess and discard the one from the new build.
+# Set false only if you want to take the stock .htaccess from the new release.
+sendy_preserve_htaccess: true
+
+# ── Webserver ─────────────────────────────────────────────────────────────
+
+# Service name restarted by the handler after a successful deploy.
+# Override in host_vars if running nginx or a PHP-FPM pool instead.
+sendy_webserver_service: apache2
+
+# ── Smoke test ────────────────────────────────────────────────────────────
+
+# Run an HTTP GET after deploy to confirm Sendy responds.
+sendy_run_smoke_test: true
+
+# URL to GET. Override in host_vars with the actual Sendy URL.
+# Example: https://sendy.example.com/
+sendy_smoke_test_url: "http://{{ ansible_default_ipv4.address }}/"
+
+# Validate TLS certificates in the smoke test.
+# Set false when testing against a self-signed cert or plain HTTP.
+sendy_smoke_test_validate_certs: true

@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: sendy_upgrade
+  author: Bob Tanner
+  description: >
+    Upgrades a self-hosted Sendy installation to a new release.
+    Backs up config, locale, and .htaccess; stages the new build;
+    applies HelloSendy's four preservation rules; rsyncs into production.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "20.04"
+        - "22.04"
+        - "24.04"
+    - name: Debian
+      versions:
+        - "11"
+        - "12"
+
+dependencies: []

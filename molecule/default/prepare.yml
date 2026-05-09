@@ -1,0 +1,126 @@
+---
+# molecule/default/prepare.yml
+# Sets up:
+#   1. Localhost  — builds the fake Sendy 7 zip (the "download" for the role).
+#   2. Managed hosts — installs Apache + PHP, creates a live Sendy install
+#      with known marker content so testinfra can assert preservation.
+#
+# Marker strings are intentionally distinct so tests can verify that the
+# live content survived and the new-build content was NOT written into place.
+
+# ── Control node ───────────────────────────────────────────────────────────
+- name: "Prepare | Build test Sendy zip on control node"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: "Prepare | Create fake Sendy zip for molecule"
+      ansible.builtin.script:
+        cmd: files/create_test_zip.py /tmp/molecule-test-sendy.zip
+        creates: /tmp/molecule-test-sendy.zip
+
+# ── Managed hosts ──────────────────────────────────────────────────────────
+- name: "Prepare | Set up live Sendy install on managed hosts"
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: "Prepare | Update apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Prepare | Install required packages"
+      ansible.builtin.apt:
+        name:
+          - apache2
+          - libapache2-mod-php
+          - rsync
+          - unzip
+          - python3
+        state: present
+
+    - name: "Prepare | Enable Apache"
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: true
+
+    - name: "Prepare | Create Sendy install directory structure"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+      loop:
+        - /var/www/html/sendy
+        - /var/www/html/sendy/includes
+        - /var/www/html/sendy/locale
+        - /var/www/html/sendy/uploads
+
+    # config.php — contains a unique marker so tests can confirm it survives.
+    - name: "Prepare | Write live config.php"
+      ansible.builtin.copy:
+        content: |
+          <?php
+          // LIVE_MARKER_CONFIG
+          $dbHost = "localhost";
+          $dbUser = "sendy_db_user";
+          $dbPass = "PLACEHOLDER_NOT_A_REAL_PASSWORD";
+          $dbName = "sendy";
+          define("APP_PATH", "https://sendy.example.com");
+        dest: /var/www/html/sendy/includes/config.php
+        owner: www-data
+        group: www-data
+        mode: "0640"
+
+    # Custom locale file — must survive the upgrade (preservation rule 2).
+    - name: "Prepare | Write live custom locale file"
+      ansible.builtin.copy:
+        content: |
+          <?php
+          // LIVE_MARKER_LOCALE
+          $lang["confirm"] = "Please confirm your subscription.";
+          $lang["unsubscribed"] = "You have been unsubscribed.";
+        dest: /var/www/html/sendy/locale/custom_en.php
+        owner: www-data
+        group: www-data
+        mode: "0644"
+
+    # .htaccess — must survive the upgrade when sendy_preserve_htaccess=true.
+    - name: "Prepare | Write live .htaccess"
+      ansible.builtin.copy:
+        content: |
+          # LIVE_MARKER_HTACCESS
+          Options -Indexes
+          RewriteEngine on
+          RewriteBase /sendy/
+          RewriteRule ^l/([a-zA-Z0-9/]+)$ l.php?i=$1 [L]
+        dest: /var/www/html/sendy/.htaccess
+        owner: www-data
+        group: www-data
+        mode: "0644"
+
+    # Existing upload — must never be deleted or replaced (preservation rule 3).
+    - name: "Prepare | Write live upload file"
+      ansible.builtin.copy:
+        content: |
+          email,name
+          # LIVE_UPLOAD
+          subscriber@example.com,Live Subscriber
+        dest: /var/www/html/sendy/uploads/live_subscriber_data.csv
+        owner: www-data
+        group: www-data
+        mode: "0644"
+
+    # Old index.php — simulates the pre-upgrade Sendy version.
+    - name: "Prepare | Write old index.php"
+      ansible.builtin.copy:
+        content: "<?php echo 'Sendy 6 OLD VERSION'; ?>"
+        dest: /var/www/html/sendy/index.php
+        owner: www-data
+        group: www-data
+        mode: "0644"

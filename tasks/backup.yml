@@ -1,0 +1,74 @@
+---
+# tasks/backup.yml
+# Snapshot the files we must preserve before any upgrade work begins:
+#   includes/config.php   — database credentials and Sendy settings
+#   locale/               — custom language override files (if any)
+#   .htaccess             — customised rewrite rules (if present)
+#
+# Note: uploads/ is NEVER touched by this role (rule 3 of the upgrade guide).
+
+- name: "Backup | Ensure backup parent directory exists"
+  ansible.builtin.file:
+    path: "{{ sendy_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "Backup | Create timestamped backup directory"
+  ansible.builtin.file:
+    path: "{{ sendy_backup_dir }}/{{ ansible_date_time.iso8601_basic_short }}"
+    state: directory
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0750"
+  register: _sendy_backup_dir
+
+- name: "Backup | Set backup_path fact for this run"
+  ansible.builtin.set_fact:
+    _sendy_this_backup: "{{ _sendy_backup_dir.path }}"
+
+- name: "Backup | Copy config.php"
+  ansible.builtin.copy:
+    src: "{{ sendy_install_dir }}/includes/config.php"
+    dest: "{{ _sendy_this_backup }}/config.php"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0640"
+
+- name: "Backup | Find custom locale files"
+  ansible.builtin.find:
+    paths: "{{ sendy_install_dir }}/locale"
+    recurse: true
+    file_type: file
+  register: _sendy_locale_files
+
+- name: "Backup | Copy locale directory"
+  ansible.builtin.copy:
+    src: "{{ sendy_install_dir }}/locale/"
+    dest: "{{ _sendy_this_backup }}/locale/"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: preserve
+  when: _sendy_locale_files.files | length > 0
+
+- name: "Backup | Check for .htaccess"
+  ansible.builtin.stat:
+    path: "{{ sendy_install_dir }}/.htaccess"
+  register: _sendy_htaccess_stat
+
+- name: "Backup | Copy .htaccess if present"
+  ansible.builtin.copy:
+    src: "{{ sendy_install_dir }}/.htaccess"
+    dest: "{{ _sendy_this_backup }}/.htaccess"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0644"
+  when: _sendy_htaccess_stat.stat.exists
+
+- name: "Backup | Report backup location"
+  ansible.builtin.debug:
+    msg: "Backup written to {{ _sendy_this_backup }}"

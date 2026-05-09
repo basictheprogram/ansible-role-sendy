@@ -1,0 +1,24 @@
+---
+# molecule/default/converge.yml
+# Runs the role against the prepared hosts.
+# sendy_zip_src points to the fake zip created by prepare.yml on localhost.
+# The smoke test is disabled; webserver state is verified by testinfra instead.
+
+- name: "Converge"
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    sendy_zip_src: /tmp/molecule-test-sendy.zip
+    sendy_install_dir: /var/www/html/sendy
+    sendy_web_user: www-data
+    sendy_web_group: www-data
+    sendy_backup_dir: /var/backups/sendy
+    sendy_staging_dir: /tmp/sendy_upgrade
+    sendy_preserve_htaccess: true
+    sendy_webserver_service: apache2
+    sendy_run_smoke_test: false
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

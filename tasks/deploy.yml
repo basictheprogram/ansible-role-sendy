@@ -1,0 +1,163 @@
+---
+# tasks/deploy.yml
+# Stages the new Sendy build, applies the four preservation rules from
+# https://sendy.co/get-updated, then syncs it into the live install dir.
+#
+# Preservation rules (per HelloSendy docs):
+#   1. Copy config.php  : live /includes/config.php → new build /includes/
+#   2. Copy locale      : live /locale/             → new build /locale/
+#   3. Delete uploads   : remove /uploads/ from new build  (live dir untouched)
+#   4. Delete .htaccess : remove new build's .htaccess if sendy_preserve_htaccess
+
+# Re-stat .htaccess so deploy.yml is self-contained when backup is skipped.
+# The result shadows the register from backup.yml if both ran — that is fine.
+- name: "Deploy | Stat live .htaccess"
+  ansible.builtin.stat:
+    path: "{{ sendy_install_dir }}/.htaccess"
+  register: _sendy_htaccess_stat
+
+# ── Stage ──────────────────────────────────────────────────────────────────
+
+- name: "Deploy | Remove stale staging directory"
+  ansible.builtin.file:
+    path: "{{ sendy_staging_dir }}"
+    state: absent
+
+- name: "Deploy | Create staging directory"
+  ansible.builtin.file:
+    path: "{{ sendy_staging_dir }}"
+    state: directory
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0755"
+
+- name: "Deploy | Upload Sendy zip from control node"
+  ansible.builtin.copy:
+    src: "{{ sendy_zip_src }}"
+    dest: "{{ sendy_staging_dir }}/sendy-update.zip"
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0640"
+
+- name: "Deploy | Extract zip into staging directory"
+  ansible.builtin.unarchive:
+    src: "{{ sendy_staging_dir }}/sendy-update.zip"
+    dest: "{{ sendy_staging_dir }}"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+
+- name: "Deploy | Find extracted top-level directory"
+  ansible.builtin.find:
+    paths: "{{ sendy_staging_dir }}"
+    file_type: directory
+    depth: 1
+  register: _sendy_extracted_dirs
+
+- name: "Deploy | Set build directory fact"
+  ansible.builtin.set_fact:
+    _sendy_build_dir: "{{ (_sendy_extracted_dirs.files | first).path }}"
+
+- name: "Deploy | Show extracted build path"
+  ansible.builtin.debug:
+    msg: "New build staged at: {{ _sendy_build_dir }}"
+
+# ── Apply preservation rules ───────────────────────────────────────────────
+
+# Rule 1 — Inject live config.php into new build
+- name: "Deploy | Rule 1 — Overlay live config.php into new build"
+  ansible.builtin.copy:
+    src: "{{ sendy_install_dir }}/includes/config.php"
+    dest: "{{ _sendy_build_dir }}/includes/config.php"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0640"
+
+# Rule 2 — Inject live locale files into new build
+- name: "Deploy | Rule 2 — Find live locale files"
+  ansible.builtin.find:
+    paths: "{{ sendy_install_dir }}/locale"
+    recurse: true
+    file_type: file
+  register: _sendy_live_locale
+
+- name: "Deploy | Rule 2 — Overlay live locale files into new build"
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ _sendy_build_dir }}/locale/{{ item.path | relpath(sendy_install_dir + '/locale') }}"
+    remote_src: true
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: preserve
+  loop: "{{ _sendy_live_locale.files }}"
+  when: _sendy_live_locale.files | length > 0
+
+# Rule 3 — Remove /uploads/ from new build so live uploads are preserved
+- name: "Deploy | Rule 3 — Remove /uploads/ from new build"
+  ansible.builtin.file:
+    path: "{{ _sendy_build_dir }}/uploads"
+    state: absent
+
+# Rule 4 — Remove new build's .htaccess if we are keeping the live one
+- name: "Deploy | Rule 4 — Remove new build's .htaccess (keeping live version)"
+  ansible.builtin.file:
+    path: "{{ _sendy_build_dir }}/.htaccess"
+    state: absent
+  when:
+    - sendy_preserve_htaccess | bool
+    - _sendy_htaccess_stat.stat.exists
+
+# ── Sync into production ───────────────────────────────────────────────────
+
+- name: "Deploy | Sync new build into live install directory"
+  ansible.posix.synchronize:
+    src: "{{ _sendy_build_dir }}/"
+    dest: "{{ sendy_install_dir }}/"
+    delete: false
+    recursive: true
+    rsync_opts:
+      - "--exclude=uploads/"
+      - "--exclude=.htaccess"
+      - "--chown={{ sendy_web_user }}:{{ sendy_web_group }}"
+  delegate_to: "{{ inventory_hostname }}"
+  notify: restart webserver
+
+- name: "Deploy | Ensure /uploads/ ownership is correct"
+  ansible.builtin.file:
+    path: "{{ sendy_install_dir }}/uploads"
+    state: directory
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0755"
+    recurse: true
+
+- name: "Deploy | Ensure config.php permissions are locked down"
+  ansible.builtin.file:
+    path: "{{ sendy_install_dir }}/includes/config.php"
+    owner: "{{ sendy_web_user }}"
+    group: "{{ sendy_web_group }}"
+    mode: "0640"
+
+# ── Clean up staging ──────────────────────────────────────────────────────
+
+- name: "Deploy | Remove staging directory"
+  ansible.builtin.file:
+    path: "{{ sendy_staging_dir }}"
+    state: absent
+
+# ── Smoke test ────────────────────────────────────────────────────────────
+
+- name: "Deploy | HTTP smoke test"
+  ansible.builtin.uri:
+    url: "{{ sendy_smoke_test_url }}"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ sendy_smoke_test_validate_certs }}"
+  register: _sendy_smoke
+  when: sendy_run_smoke_test | bool
+
+- name: "Deploy | Report smoke test result"
+  ansible.builtin.debug:
+    msg: "Smoke test passed — HTTP {{ _sendy_smoke.status }} from {{ sendy_smoke_test_url }}"
+  when: sendy_run_smoke_test | bool

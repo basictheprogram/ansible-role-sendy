@@ -1,0 +1,7 @@
+---
+# molecule/default/requirements.yml
+# Ansible collections required by the role and molecule itself.
+
+collections:
+  - name: ansible.posix
+  - name: community.docker

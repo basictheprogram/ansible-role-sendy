@@ -1,0 +1,53 @@
+---
+# tasks/preflight.yml
+# Validate all preconditions before touching the live install.
+# Fail fast here — better to abort before any backup or file changes.
+
+- name: "Preflight | Assert required variables are set"
+  ansible.builtin.assert:
+    that:
+      - sendy_install_dir | length > 0
+      - sendy_zip_src | length > 0
+      - sendy_web_user | length > 0
+      - sendy_web_group | length > 0
+    fail_msg: >
+      One or more required variables are empty.
+      Set sendy_zip_src in host_vars before running this play.
+
+- name: "Preflight | Check that the Sendy zip exists on the control node"
+  ansible.builtin.stat:
+    path: "{{ sendy_zip_src }}"
+  register: _sendy_zip_stat
+  delegate_to: localhost
+  become: false
+
+- name: "Preflight | Fail if zip is not present on control node"
+  ansible.builtin.fail:
+    msg: >
+      Sendy zip not found at {{ sendy_zip_src }} on the Ansible control node.
+      Mount the Synology share and set sendy_zip_src to the full path of the
+      .zip file before running.
+  when: not _sendy_zip_stat.stat.exists
+
+- name: "Preflight | Verify live config.php exists"
+  ansible.builtin.stat:
+    path: "{{ sendy_install_dir }}/includes/config.php"
+  register: _sendy_config_stat
+
+- name: "Preflight | Fail if live config.php is missing"
+  ansible.builtin.fail:
+    msg: >
+      config.php not found at {{ sendy_install_dir }}/includes/config.php.
+      Verify sendy_install_dir is correct.
+  when: not _sendy_config_stat.stat.exists
+
+- name: "Preflight | Display upgrade target info"
+  ansible.builtin.debug:
+    msg:
+      - "Host         : {{ inventory_hostname }}"
+      - "Install dir  : {{ sendy_install_dir }}"
+      - "Zip source   : {{ sendy_zip_src }}"
+      - "Staging dir  : {{ sendy_staging_dir }}"
+      - "Backup dir   : {{ sendy_backup_dir }}"
+      - "Keep htaccess: {{ sendy_preserve_htaccess }}"
+      - "Smoke test   : {{ sendy_run_smoke_test }}"
