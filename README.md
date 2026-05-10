@@ -1,5 +1,8 @@
 # ansible-role-sendy
 
+[![CI](https://github.com/basictheprogram/ansible-role-sendy/actions/workflows/ci.yml/badge.svg)](https://github.com/basictheprogram/ansible-role-sendy/actions/workflows/ci.yml)
+[![Ansible Galaxy](https://img.shields.io/badge/ansible--galaxy-sendy-blue.svg?style=popout-square)](https://galaxy.ansible.com/realtime/sendy)
+[![Ansible Role](https://img.shields.io/ansible/role/d/realtime/sendy.svg?style=popout-square)](https://galaxy.ansible.com/realtime/sendy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Ansible role that automates the [HelloSendy upgrade procedure](https://sendy.co/get-updated)

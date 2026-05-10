@@ -2,9 +2,13 @@
 # molecule/default/molecule.yml
 # Default scenario: happy-path upgrade across the full OS matrix.
 #
-# Images: geerlingguy's systemd-enabled Ansible images.
-# Check https://github.com/geerlingguy/docker-*-ansible for latest tags.
-# Update image names here if a platform's image is not yet published.
+# Images: geerlingguy's systemd-enabled Ansible images (Docker Hub).
+# Verify current tags at https://hub.docker.com/u/geerlingguy
+# or https://github.com/geerlingguy?tab=packages&q=ansible
+# Update image names here when new platform images are published.
+#
+# debian-13 / ubuntu-2604: confirm image availability before enabling;
+# comment them back in once a published image is verified.
 
 dependency:
   name: galaxy
@@ -16,7 +20,7 @@ driver:
 
 platforms:
   - name: debian-12
-    image: ghcr.io/geerlingguy/docker-debian12-ansible:latest
+    image: geerlingguy/docker-debian12-ansible:latest
     command: /lib/systemd/systemd
     privileged: true
     volumes:
@@ -24,7 +28,7 @@ platforms:
     pre_build_image: true
 
   - name: debian-13
-    image: ghcr.io/geerlingguy/docker-debian13-ansible:latest
+    image: geerlingguy/docker-debian13-ansible:latest
     command: /lib/systemd/systemd
     privileged: true
     volumes:
@@ -32,7 +36,7 @@ platforms:
     pre_build_image: true
 
   - name: ubuntu-2204
-    image: ghcr.io/geerlingguy/docker-ubuntu2204-ansible:latest
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
     command: /lib/systemd/systemd
     privileged: true
     volumes:
@@ -40,7 +44,7 @@ platforms:
     pre_build_image: true
 
   - name: ubuntu-2404
-    image: ghcr.io/geerlingguy/docker-ubuntu2404-ansible:latest
+    image: geerlingguy/docker-ubuntu2404-ansible:latest
     command: /lib/systemd/systemd
     privileged: true
     volumes:
@@ -48,7 +52,7 @@ platforms:
     pre_build_image: true
 
   - name: ubuntu-2604
-    image: ghcr.io/geerlingguy/docker-ubuntu2604-ansible:latest
+    image: geerlingguy/docker-ubuntu2604-ansible:latest
     command: /lib/systemd/systemd
     privileged: true
     volumes:
@@ -60,6 +64,10 @@ provisioner:
   config_options:
     defaults:
       callbacks_enabled: profile_tasks
+      # molecule-docker's destroy.yml uses 'when: (lookup('env', 'HOME'))' which
+      # returns a string rather than a boolean. ansible-core 2.20 rejects this.
+      # Remove once molecule-docker ships a fix.
+      allow_broken_conditionals: true
   playbooks:
     prepare: prepare.yml
     converge: converge.yml
@@ -67,13 +75,9 @@ provisioner:
     host_vars:
       debian-12:
         ansible_python_interpreter: /usr/bin/python3
-      debian-13:
-        ansible_python_interpreter: /usr/bin/python3
       ubuntu-2204:
         ansible_python_interpreter: /usr/bin/python3
       ubuntu-2404:
-        ansible_python_interpreter: /usr/bin/python3
-      ubuntu-2604:
         ansible_python_interpreter: /usr/bin/python3
 
 verifier:

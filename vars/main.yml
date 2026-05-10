@@ -4,4 +4,4 @@
 # Do not override these in host_vars or group_vars.
 
 # Version being installed — update when the role is used for a future release.
-_sendy_upgrade_version: "7.0.01"
+_sendy_upgrade_version: "7.0.2"

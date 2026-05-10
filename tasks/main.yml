@@ -1,7 +1,6 @@
 ---
 # tasks/main.yml
 # Entry point — runs preflight, backup, then deploy in order.
-# OS patching is handled by a separate role/playbook.
 
 - name: "Preflight checks"
   ansible.builtin.import_tasks: preflight.yml

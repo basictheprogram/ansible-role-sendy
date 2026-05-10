@@ -1,8 +1,8 @@
 ---
 # handlers/main.yml
 
-- name: restart webserver
+- name: Restart webserver
   ansible.builtin.service:
     name: "{{ sendy_webserver_service }}"
     state: restarted
-  listen: restart webserver
+  listen: Restart webserver

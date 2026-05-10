@@ -121,7 +121,7 @@
       - "--exclude=.htaccess"
       - "--chown={{ sendy_web_user }}:{{ sendy_web_group }}"
   delegate_to: "{{ inventory_hostname }}"
-  notify: restart webserver
+  notify: Restart webserver
 
 - name: "Deploy | Ensure /uploads/ ownership is correct"
   ansible.builtin.file:
