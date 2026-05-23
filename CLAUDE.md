@@ -8,6 +8,9 @@ stage the new build, apply preservation rules, rsync into production.
 
 OS patching is out of scope — handled by a separate role and playbook.
 
+No `DESIGN.md` exists yet — add one when architectural decisions need
+to be recorded.
+
 ---
 
 ## Behavioral guidelines
@@ -132,6 +135,22 @@ guessing:
 * PHP-FPM pool reload — if the server runs PHP-FPM separately from the
   web server, the handler may need to reload the FPM pool in addition
   to (or instead of) restarting Apache/nginx.
+
+## Implementation order
+
+Work one section at a time. Each item = one focused session and one
+commit. Stop and verify between items.
+
+1. `meta/main.yml` — ✅ done
+2. `defaults/main.yml` — ✅ done (full public interface)
+3. `vars/main.yml` — ✅ done (`_sendy_upgrade_version` pin)
+4. `handlers/main.yml` — ✅ done (Restart webserver)
+5. `tasks/preflight.yml` — ✅ done
+6. `tasks/backup.yml` — ✅ done
+7. `tasks/deploy.yml` — ✅ done (all four preservation rules + smoke test)
+8. `molecule/default/` — ⬜ converge/prepare scaffolded; test assertions still empty
+9. `templates/` — ⬜ empty; add Jinja2 templates if future tasks require them
+10. `files/` — ⬜ empty; add static files if future tasks require them
 
 ## Testing locally
 

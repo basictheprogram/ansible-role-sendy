@@ -5,7 +5,7 @@
 [![Ansible Role](https://img.shields.io/ansible/role/d/realtime/sendy.svg?style=popout-square)](https://galaxy.ansible.com/realtime/sendy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Ansible role that automates the [HelloSendy upgrade procedure](https://sendy.co/get-updated)
+Ansible role that automates the [Sendy upgrade procedure](https://sendy.co/get-updated)
 for a self-hosted Sendy installation on a Linux EC2 instance.
 
 OS patching is out of scope — handled by a separate role and playbook.
@@ -22,10 +22,10 @@ OS patching is out of scope — handled by a separate role and playbook.
    (if present) into a timestamped directory under `sendy_backup_dir`.
 
 3. **Deploy** — uploads and extracts the new build to a staging path, applies
-   HelloSendy's four preservation rules, rsyncs the staged build into the live
+   Sendy's four preservation rules, rsyncs the staged build into the live
    install directory, then runs an optional HTTP smoke test.
 
-### HelloSendy's four preservation rules
+### Sendy's four preservation rules
 
 | # | Rule |
 |---|------|
@@ -47,7 +47,7 @@ OS patching is out of scope — handled by a separate role and playbook.
 
 ### Getting the Sendy zip onto the control node
 
-Download directly from your HelloSendy account, copy from a NAS share, or
+Download directly from your Sendy account, copy from a NAS share, or
 use any method that places the zip at the path you set in `sendy_zip_src`.
 
 ```bash
