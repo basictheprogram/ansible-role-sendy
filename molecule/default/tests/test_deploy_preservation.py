@@ -66,27 +66,27 @@ def test_rule1_config_php_does_not_contain_new_build_marker(host: Host) -> None:
 
 def test_rule2_custom_locale_file_exists(host: Host) -> None:
     """Custom locale file written by prepare.yml must still exist."""
-    f = host.file(f"{INSTALL_DIR}/locale/custom_en.php")
+    f = host.file(f"{INSTALL_DIR}/locale/es_ES/LC_MESSAGES/default.po")
     assert f.exists
     assert f.is_file
 
 
 def test_rule2_custom_locale_file_contains_live_marker(host: Host) -> None:
     """Custom locale file content must be the live version, not overwritten."""
-    f = host.file(f"{INSTALL_DIR}/locale/custom_en.php")
+    f = host.file(f"{INSTALL_DIR}/locale/es_ES/LC_MESSAGES/default.po")
     assert LIVE_LOCALE_MARKER in f.content_string
 
 
 def test_rule2_new_build_locale_file_deployed(host: Host) -> None:
-    """New locale file from the build (en_US.php) must also land in locale/."""
-    f = host.file(f"{INSTALL_DIR}/locale/en_US.php")
+    """New locale file from the build (en_US) must also land in locale/."""
+    f = host.file(f"{INSTALL_DIR}/locale/en_US/LC_MESSAGES/default.po")
     assert f.exists
     assert f.is_file
 
 
 def test_rule2_new_build_locale_owned_by_web_user(host: Host) -> None:
     """New locale file must be owned by the web user after deploy."""
-    f = host.file(f"{INSTALL_DIR}/locale/en_US.php")
+    f = host.file(f"{INSTALL_DIR}/locale/en_US/LC_MESSAGES/default.po")
     assert f.user == WEB_USER
     assert f.group == WEB_GROUP
 

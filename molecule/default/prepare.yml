@@ -15,10 +15,12 @@
   gather_facts: false
 
   tasks:
+    # Filename must carry a semver (X.Y.Z) — tasks/preflight.yml parses one
+    # from sendy_zip_src's basename for the downgrade guard.
     - name: "Prepare | Create fake Sendy zip for molecule"
       ansible.builtin.script:
-        cmd: files/create_test_zip.py /tmp/molecule-test-sendy.zip
-        creates: /tmp/molecule-test-sendy.zip
+        cmd: files/create_test_zip.py /tmp/sendy-7.0.1.zip
+        creates: /tmp/sendy-7.0.1.zip
 
 # ── Managed hosts ──────────────────────────────────────────────────────────
 - name: "Prepare | Set up live Sendy install on managed hosts"
@@ -58,7 +60,7 @@
       loop:
         - /var/www/html/sendy
         - /var/www/html/sendy/includes
-        - /var/www/html/sendy/locale
+        - /var/www/html/sendy/locale/es_ES/LC_MESSAGES
         - /var/www/html/sendy/uploads
 
     # config.php — contains a unique marker so tests can confirm it survives.
@@ -77,15 +79,18 @@
         group: www-data
         mode: "0640"
 
-    # Custom locale file — must survive the upgrade (preservation rule 2).
+    # Custom locale override — must survive the upgrade (preservation rule 2).
+    # Nested under es_ES/LC_MESSAGES to match how a real Sendy release lays
+    # out locale/ (gettext .po files under locale/<lang>/LC_MESSAGES/).
     - name: "Prepare | Write live custom locale file"
       ansible.builtin.copy:
         content: |
-          <?php
-          // LIVE_MARKER_LOCALE
-          $lang["confirm"] = "Please confirm your subscription.";
-          $lang["unsubscribed"] = "You have been unsubscribed.";
-        dest: /var/www/html/sendy/locale/custom_en.php
+          # LIVE_MARKER_LOCALE
+          msgid "confirm"
+          msgstr "Por favor confirme su suscripcion."
+          msgid "unsubscribed"
+          msgstr "Se ha dado de baja."
+        dest: /var/www/html/sendy/locale/es_ES/LC_MESSAGES/default.po
         owner: www-data
         group: www-data
         mode: "0644"

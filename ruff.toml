@@ -50,4 +50,9 @@ line-ending = "auto"
 # D103  - test function names are self-documenting
 # ANN401 - Any is accurate for yaml.safe_load return values
 # PLR2004 - octal/numeric literals in assertions are intentional
-"**/tests/**" = ["INP001", "S101", "D103", "ANN401", "PLR2004"]
+# S108  - path constants intentionally mirror the role's own /tmp defaults
+"**/tests/**" = ["INP001", "S101", "D103", "ANN401", "PLR2004", "S108"]
+# T201 - standalone CLI helper invoked by molecule/default/prepare.yml;
+# printing progress/usage to stdout/stderr is the intended behavior, not
+# debug leftovers.
+"molecule/default/files/create_test_zip.py" = ["T201"]

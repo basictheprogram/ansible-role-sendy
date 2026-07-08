@@ -46,6 +46,7 @@
     remote_src: true
     owner: "{{ sendy_web_user }}"
     group: "{{ sendy_web_group }}"
+    mode: "u=rwX,g=rX,o=rX"
 
 - name: "Deploy | Find extracted top-level directory"
   ansible.builtin.find:
@@ -161,3 +162,23 @@
   ansible.builtin.debug:
     msg: "Smoke test passed — HTTP {{ _sendy_smoke.status }} from {{ sendy_smoke_test_url }}"
   when: sendy_run_smoke_test | bool
+
+# ── Record upgraded version ─────────────────────────────────────────────────
+
+# Re-parse the version so deploy.yml is self-contained when preflight is
+# skipped via tags (see the .htaccess re-stat above for the same pattern).
+- name: "Deploy | Re-parse Sendy version from the zip filename"
+  ansible.builtin.set_fact:
+    _sendy_zip_version: "{{ sendy_zip_src | basename | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+)') }}"
+
+- name: "Deploy | Ensure the version marker's parent directory exists"
+  ansible.builtin.file:
+    path: "{{ sendy_version_marker | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: "Deploy | Record the upgraded Sendy version"
+  ansible.builtin.copy:
+    content: "{{ _sendy_zip_version }}\n"
+    dest: "{{ sendy_version_marker }}"
+    mode: "0644"

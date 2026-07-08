@@ -8,9 +8,6 @@ stage the new build, apply preservation rules, rsync into production.
 
 OS patching is out of scope — handled by a separate role and playbook.
 
-No `DESIGN.md` exists yet — add one when architectural decisions need
-to be recorded.
-
 ---
 
 ## Behavioral guidelines
@@ -31,6 +28,7 @@ Before adding or changing anything:
 * If the request is ambiguous (which task file? which variable?),
   name the ambiguity and ask. Don't guess and implement.
 * If a simpler approach solves the problem, say so and push back.
+* If something conflicts with `DESIGN.md`, flag it before proceeding.
 
 ### 2. Simplicity first
 
@@ -87,6 +85,77 @@ Strong success criteria allow independent verification. Weak criteria
 
 ---
 
+## Role-specific notes
+
+### Source of truth
+
+`DESIGN.md` is the authoritative spec. Read it before any non-trivial
+change. If code disagrees with `DESIGN.md`, `DESIGN.md` is right —
+flag the discrepancy and ask before fixing the design to match the code.
+
+### Design notes
+
+See `DESIGN.md` — scope, settled decisions (four preservation rules,
+backup format, sync tool, `sendy_install_dir` shared by name with the
+sibling install role, version guard), and open questions (DB migrations,
+PHP-FPM reload, smoke test URL vs. name-based vhosts).
+
+### Secrets
+
+Role-specific secret handling: no default variable in this role is
+named `*_key`/`*_token`/`*_password`/`*_secret` — the sensitive surface
+is a file, not a variable. `config.php` is backed up to the remote host
+only — it is never fetched to the control node or logged. Use
+`no_log: true` on any task that could expose its content. Production
+host credentials (SES SMTP, RDS, Sendy license, etc.) for a real
+deployment target are managed via `ansible-vault` in the inventory repo
+(e.g. `production/host_vars/<host>/vault.yml` in `ansible-playbooks`) —
+this role never manages, references, or ships those values itself.
+
+### Commit scopes
+
+Role-specific subsystem scopes: `preflight`, `backup`, `deploy`,
+`config`, `locale`, `uploads`, `htaccess`, `smoke-test`.
+
+### Settled decisions
+
+See `DESIGN.md`'s Settled decisions section — OS-patching exclusion,
+uploads-never-modified, staging-always-wiped, `ansible.posix.synchronize`
+as the sync tool, timestamped-directory backups, the optional smoke
+test, `sendy_install_dir`'s shared naming with the sibling install role,
+and the version guard.
+
+### Open questions
+
+See `DESIGN.md`'s Open questions section — database migrations, PHP-FPM
+pool reload, and the smoke test URL vs. name-based virtual hosting.
+
+### Implementation order
+
+Work one section at a time. Each item = one focused session and one
+commit. Stop and verify between items.
+
+1. `meta/main.yml` — ✅ done
+2. `defaults/main.yml` — ✅ done (full public interface)
+3. `vars/main.yml` — ✅ done (empty; version tracking moved to
+   `defaults/main.yml` + `tasks/preflight.yml` — see `DESIGN.md`)
+4. `handlers/main.yml` — ✅ done (Restart webserver)
+5. `tasks/preflight.yml` — ✅ done
+6. `tasks/backup.yml` — ✅ done
+7. `tasks/deploy.yml` — ✅ done (all four preservation rules + smoke test)
+8. `molecule/default/` — ✅ done (converge/prepare scaffolded, testinfra
+   suite covering backup, deploy, preservation, permissions, and webserver)
+9. `templates/` — ⬜ empty; add Jinja2 templates if future tasks require them
+10. `files/` — ⬜ empty; add static files if future tasks require them
+11. `.github/workflows/ci.yml` — ⬜ does not exist yet; README already links
+    a CI badge for it, so the badge is currently red. Add when CI is set up.
+
+### Consumer side notes
+
+<!-- TODO: fill in consumer notes -->
+
+---
+
 ## Conventions
 
 * **Commits**: follow the commit message guide in this file exactly.
@@ -98,7 +167,11 @@ Strong success criteria allow independent verification. Weak criteria
 * **Secrets**: never write a credential into a tracked file. `config.php`
   is backed up to the remote host only — it is never fetched to the
   control node or logged. Use `no_log: true` on any task that could
-  expose its content.
+  expose its content. Production host credentials (SES SMTP, RDS, Sendy
+  license, etc.) for a real deployment target are managed via
+  `ansible-vault` in the inventory repo (e.g. `production/host_vars/<host>/vault.yml`
+  in `ansible-playbooks`) — this role never manages, references, or ships
+  those values itself.
 * **Modules**: prefer FQCNs (`ansible.builtin.copy`, `ansible.posix.synchronize`,
   `ansible.builtin.uri`). The `.ansible-lint` config requires `fqcn-builtins`.
 * **Idempotency**: every task should be safe to re-run. The staging dir
@@ -109,54 +182,16 @@ Strong success criteria allow independent verification. Weak criteria
 * **Variable prefix**: all public variables are prefixed `sendy_`.
   Internal facts set by `set_fact` are prefixed `_sendy_`.
 
-## Settled decisions — don't re-litigate
-
-* OS patching = separate role. This role does not touch `apt` or `yum`.
-* Uploads dir = never modified. Rule 3 removes `/uploads/` from the staged
-  build; the live `/uploads/` is always left as-is.
-* Staging dir = always wiped at start and end of deploy. No partial-state
-  leftovers between runs.
-* Sync tool = `ansible.posix.synchronize` (rsync). `ansible.builtin.copy`
-  recursive is slower and doesn't preserve permissions cleanly across
-  large directory trees.
-* Backup = timestamped directory, not a tarball. Easier to inspect and
-  restore individual files without extracting an archive.
-* Smoke test = optional HTTP GET via `ansible.builtin.uri`. Not a deep
-  health check — just confirms the web server responds after the deploy.
-
-## Open questions
-
-If a task touches one of these, leave a `# TODO:` comment rather than
-guessing:
-
-* Database migrations — Sendy 7 may require schema changes. The current
-  role has no DB migration step; confirm with HelloSendy docs before
-  adding one.
-* PHP-FPM pool reload — if the server runs PHP-FPM separately from the
-  web server, the handler may need to reload the FPM pool in addition
-  to (or instead of) restarting Apache/nginx.
-
-## Implementation order
-
-Work one section at a time. Each item = one focused session and one
-commit. Stop and verify between items.
-
-1. `meta/main.yml` — ✅ done
-2. `defaults/main.yml` — ✅ done (full public interface)
-3. `vars/main.yml` — ✅ done (`_sendy_upgrade_version` pin)
-4. `handlers/main.yml` — ✅ done (Restart webserver)
-5. `tasks/preflight.yml` — ✅ done
-6. `tasks/backup.yml` — ✅ done
-7. `tasks/deploy.yml` — ✅ done (all four preservation rules + smoke test)
-8. `molecule/default/` — ⬜ converge/prepare scaffolded; test assertions still empty
-9. `templates/` — ⬜ empty; add Jinja2 templates if future tasks require them
-10. `files/` — ⬜ empty; add static files if future tasks require them
-
 ## Testing locally
 
 * `pre-commit run --all-files` — fast lint/format pass. Run before every commit.
 * `ansible-playbook upgrade_sendy.yml --check --diff` — dry-run against
   real inventory before applying changes.
+
+## When in doubt
+
+Read `DESIGN.md`, then ask. The schemas and decisions there are
+load-bearing.
 
 ---
 
@@ -189,6 +224,7 @@ Pay special attention to:
 * Changes to `defaults/main.yml` — these define the role's public interface
 * Changes to handler names, task names, and tags — consumers may pin to them
 * Changes to the four upgrade preservation rules — these are load-bearing
+* Changes to `meta/main.yml` — galaxy metadata, min Ansible version, platforms
 
 If multiple files are modified, identify the **dominant intent** rather
 than listing every file.
@@ -214,7 +250,7 @@ Infer a scope from the role layout or Sendy subsystem.
 Common Ansible role scopes: `tasks`, `handlers`, `defaults`, `vars`,
 `meta`, `molecule`.
 
-Common Sendy subsystem scopes: `preflight`, `backup`, `deploy`,
+Role-specific subsystem scopes: `preflight`, `backup`, `deploy`,
 `config`, `locale`, `uploads`, `htaccess`, `smoke-test`.
 
 Only include a scope when it adds clarity. Prefer the Sendy subsystem

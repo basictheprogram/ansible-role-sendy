@@ -1,0 +1,92 @@
+---
+argument_specs:
+  main:
+    short_description: >-
+      Upgrade an existing self-hosted Sendy installation on Debian/Ubuntu,
+      following HelloSendy's official four-rule upgrade procedure.
+    description: >-
+      Backs up includes/config.php, locale/, and .htaccess, stages the new
+      build on the remote host, applies the four preservation rules from
+      https://sendy.co/get-updated, syncs the result into the live install
+      directory, and runs an optional HTTP smoke test. OS patching and
+      first-time installation are both out of scope — see the sibling
+      realtime.sendy_install role for installs.
+    options:
+      sendy_install_dir:
+        type: str
+        default: /var/www/html/sendy
+        description: >-
+          Absolute path to the live Sendy web root on the remote host.
+          Named to match the sibling realtime.sendy_install role's own
+          variable so a single host_vars entry configures both roles.
+      sendy_web_user:
+        type: str
+        default: www-data
+        description: System user that owns the web server process.
+      sendy_web_group:
+        type: str
+        default: www-data
+        description: System group that owns the web server process.
+      sendy_zip_src:
+        type: str
+        default: ""
+        description: >-
+          Required. Full path to the new Sendy release zip on the Ansible
+          control node. Enforced non-empty by preflight. Filename must
+          contain a semantic version (e.g. sendy-7.0.6.zip) so preflight
+          can parse it and guard against downgrades.
+      sendy_staging_dir:
+        type: str
+        default: /tmp/sendy_upgrade
+        description: >-
+          Temp directory on the remote host for extracting the new build.
+          Created at the start of deploy and removed at the end.
+      sendy_backup_dir:
+        type: str
+        default: /var/backups/sendy
+        description: >-
+          Parent directory for timestamped backups on the remote host.
+          Each run creates a subdirectory named by ISO 8601 timestamp.
+      sendy_preserve_htaccess:
+        type: bool
+        default: true
+        description: >-
+          Keep the live .htaccess and discard the one from the new build.
+          Set false only to take the stock .htaccess from the new release.
+      sendy_webserver_service:
+        type: str
+        default: apache2
+        description: >-
+          Service name restarted by the handler after a successful deploy.
+      sendy_run_smoke_test:
+        type: bool
+        default: true
+        description: Run an HTTP GET after deploy to confirm Sendy responds.
+      sendy_smoke_test_url:
+        type: str
+        default: "http://{{ ansible_default_ipv4.address }}/"
+        description: >-
+          URL to GET for the smoke test. Override with the real Sendy URL
+          — the default bare-IP address will not reach Sendy on a target
+          using name-based virtual hosting.
+      sendy_smoke_test_validate_certs:
+        type: bool
+        default: true
+        description: >-
+          Validate TLS certificates in the smoke test. Set false when
+          testing against a self-signed cert or plain HTTP.
+      sendy_version_marker:
+        type: str
+        default: /var/lib/sendy_upgrade/version
+        description: >-
+          Path on the target host where this role records the Sendy
+          version it last upgraded to, parsed from sendy_zip_src's
+          filename. Preflight fails if a new zip's version is older than
+          what's recorded here. Kept outside the web root so it's never
+          web-accessible.
+      sendy_force_reupgrade:
+        type: bool
+        default: false
+        description: >-
+          Testing escape hatch. Bypasses only the older-version guard
+          against sendy_version_marker. Leave false in production.

@@ -1,0 +1,8 @@
+---
+# requirements.yml
+# Ansible collections used by this role's tasks (ansible.posix, for
+# rsyncing the staged build into the live install directory via
+# ansible.posix.synchronize).
+
+collections:
+  - name: ansible.posix

@@ -20,6 +20,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+_EXPECTED_ARGC = 2  # script name + output_zip_path
+
 # ---------------------------------------------------------------------------
 # Build manifest
 # ---------------------------------------------------------------------------
@@ -34,38 +36,22 @@ from pathlib import Path
 _BUILD_FILES: dict[str, str] = {
     # includes/ ── config.php must be replaced by the live version
     "sendy/includes/config.php": (
-        "<?php\n"
-        "// NEW_BUILD_CONFIG — must NOT survive into the live install\n"
-        "$dbHost = 'build-placeholder';\n"
+        "<?php\n// NEW_BUILD_CONFIG — must NOT survive into the live install\n$dbHost = 'build-placeholder';\n"
     ),
     # New PHP file introduced in Sendy 7 — should land in the live install
-    "sendy/includes/functions.php": (
-        "<?php\n"
-        "// NEW_IN_7 functions.php\n"
-    ),
-    # locale/ ── stock locale from the new build; custom locale must overlay it
-    "sendy/locale/en_US.php": (
-        "<?php\n"
-        "// NEW_IN_7 en_US.php\n"
-        '$lang["confirm"] = "Please confirm.";' + "\n"
-    ),
+    "sendy/includes/functions.php": ("<?php\n// NEW_IN_7 functions.php\n"),
+    # locale/ ── stock locale from the new build, nested the way a real
+    # Sendy release ships it (locale/<lang>/LC_MESSAGES/default.po); a
+    # custom live override lives under a different <lang> dir and must
+    # overlay this rather than be replaced by it.
+    "sendy/locale/en_US/LC_MESSAGES/default.po": ('# NEW_IN_7 default.po\nmsgid "confirm"\nmsgstr "Please confirm."\n'),
     # uploads/ ── the entire directory must be removed from the build before sync
     "sendy/uploads/.gitkeep": "",
     # .htaccess ── must be removed from the build when preserve_htaccess=true
-    "sendy/.htaccess": (
-        "# NEW_BUILD_HTACCESS — must NOT survive into the live install\n"
-        "Options -Indexes\n"
-    ),
+    "sendy/.htaccess": ("# NEW_BUILD_HTACCESS — must NOT survive into the live install\nOptions -Indexes\n"),
     # Core application files — should be deployed into the live install
-    "sendy/index.php": (
-        "<?php\n"
-        "// Sendy 7.0.01 NEW VERSION\n"
-        'echo "Sendy 7.0.01";' + "\n"
-    ),
-    "sendy/login.php": (
-        "<?php\n"
-        "// NEW_IN_7 login.php\n"
-    ),
+    "sendy/index.php": ('<?php\n// Sendy 7.0.01 NEW VERSION\necho "Sendy 7.0.01";' + "\n"),
+    "sendy/login.php": ("<?php\n// NEW_IN_7 login.php\n"),
 }
 
 
@@ -80,7 +66,7 @@ def create_zip(output_path: Path) -> None:
 
 def main() -> None:
     """Entry point — parse CLI args and invoke :func:`create_zip`."""
-    if len(sys.argv) != 2:
+    if len(sys.argv) != _EXPECTED_ARGC:
         print(f"Usage: {sys.argv[0]} <output_zip_path>", file=sys.stderr)
         sys.exit(1)
     create_zip(Path(sys.argv[1]))

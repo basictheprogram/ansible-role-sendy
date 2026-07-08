@@ -14,9 +14,11 @@ OS patching is out of scope — handled by a separate role and playbook.
 
 ## What it does
 
-1. **Preflight** — asserts required variables are set, confirms the zip exists
-   on the control node, and verifies the live `config.php` is present before
-   any changes are made.
+1. **Preflight** — asserts ansible-core version and OS family are supported,
+   parses a semantic version from the zip's filename and fails if it's not
+   newer than the last upgrade recorded on the target, confirms the zip
+   exists on the control node, and verifies the live `config.php` is present
+   before any changes are made.
 
 2. **Backup** — snapshots `includes/config.php`, `locale/`, and `.htaccess`
    (if present) into a timestamped directory under `sendy_backup_dir`.
@@ -40,10 +42,19 @@ OS patching is out of scope — handled by a separate role and playbook.
 
 | Requirement | Notes |
 |---|---|
-| Ansible ≥ 2.14 | `pip install ansible` |
-| `ansible.posix` collection | `ansible-galaxy collection install ansible.posix` |
-| Sendy zip on Ansible control node | See source options below |
+| Ansible core ≥ 2.20 | `pip install ansible`; enforced by preflight |
+| `ansible.posix` collection | Declared in `requirements.yml`; install with `ansible-galaxy collection install -r requirements.yml` |
+| Sendy zip on Ansible control node | Filename must contain a semver (e.g. `sendy-7.0.6.zip`); see source options below |
 | SSH key access to target host | Set `ansible_ssh_private_key_file` in host_vars |
+
+### Supported platforms
+
+Enforced by preflight; other Debian/Ubuntu releases get a warning, not a failure.
+
+| OS family | Versions |
+|---|---|
+| Debian | bookworm (12), trixie (13) |
+| Ubuntu | jammy (22.04), noble (24.04), resolute (26.04) |
 
 ### Getting the Sendy zip onto the control node
 
@@ -75,8 +86,8 @@ sendy_webserver_service: apache2
 Then run:
 
 ```bash
-# Install required collection
-ansible-galaxy collection install ansible.posix
+# Install required collections
+ansible-galaxy collection install -r requirements.yml
 
 # Dry-run first (no changes made)
 ansible-playbook upgrade_sendy.yml --check --diff
@@ -103,20 +114,23 @@ ansible-playbook upgrade_sendy.yml --tags sendy_deploy
 ## Variables
 
 All variables can be overridden in `host_vars`, `group_vars`, or with `-e`.
+Full descriptions and types are also documented in `meta/argument_specs.yml`.
 
 | Variable | Default | Description |
 |---|---|---|
-| `sendy_install_dir` | `/var/www/html/sendy` | Live Sendy web root on the remote host |
+| `sendy_install_dir` | `/var/www/html/sendy` | Live Sendy web root on the remote host. Shared by name with the sibling install role |
 | `sendy_web_user` | `www-data` | Web server process user |
 | `sendy_web_group` | `www-data` | Web server process group |
-| `sendy_zip_src` | `""` | **Required.** Path to zip on Ansible control node |
+| `sendy_zip_src` | `""` | **Required.** Path to zip on Ansible control node. Filename must contain a semver |
 | `sendy_staging_dir` | `/tmp/sendy_upgrade` | Temp dir on remote for extraction |
 | `sendy_backup_dir` | `/var/backups/sendy` | Parent dir for timestamped backups |
 | `sendy_preserve_htaccess` | `true` | Keep live `.htaccess`, discard new build's |
 | `sendy_webserver_service` | `apache2` | Service name restarted after deploy |
 | `sendy_run_smoke_test` | `true` | HTTP GET smoke test after deploy |
-| `sendy_smoke_test_url` | `http://{{ ansible_default_ipv4.address }}/` | URL to test |
+| `sendy_smoke_test_url` | `http://{{ ansible_default_ipv4.address }}/` | URL to test. Override explicitly on name-based virtual hosts |
 | `sendy_smoke_test_validate_certs` | `true` | Validate TLS in smoke test |
+| `sendy_version_marker` | `/var/lib/sendy_upgrade/version` | Where the last-upgraded version is recorded, for the downgrade guard |
+| `sendy_force_reupgrade` | `false` | Testing only. Bypasses the older-version guard |
 
 ---
 
@@ -149,3 +163,7 @@ pre-commit run --all-files
 ## License
 
 [MIT](LICENSE) — Copyright (c) 2026 Bob Tanner
+
+## Author Information
+
+Copyright (c) 2026 Bob Tanner

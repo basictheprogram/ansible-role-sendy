@@ -110,16 +110,14 @@ def test_backup_locale_directory_exists(host: Host, backup_dir: str) -> None:
 
 def test_backup_custom_locale_file_exists(host: Host, backup_dir: str) -> None:
     """The custom locale file written by prepare.yml must be in the backup."""
-    f = host.file(f"{backup_dir}/locale/custom_en.php")
+    f = host.file(f"{backup_dir}/locale/es_ES/LC_MESSAGES/default.po")
     assert f.exists
     assert f.is_file
 
 
-def test_backup_custom_locale_file_contains_live_marker(
-    host: Host, backup_dir: str
-) -> None:
+def test_backup_custom_locale_file_contains_live_marker(host: Host, backup_dir: str) -> None:
     """Backed-up locale file must carry the live marker string."""
-    f = host.file(f"{backup_dir}/locale/custom_en.php")
+    f = host.file(f"{backup_dir}/locale/es_ES/LC_MESSAGES/default.po")
     assert LIVE_LOCALE_MARKER in f.content_string
 
 

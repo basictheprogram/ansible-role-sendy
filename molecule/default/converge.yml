@@ -10,7 +10,7 @@
   become: true
 
   vars:
-    sendy_zip_src: /tmp/molecule-test-sendy.zip
+    sendy_zip_src: /tmp/sendy-7.0.1.zip
     sendy_install_dir: /var/www/html/sendy
     sendy_web_user: www-data
     sendy_web_group: www-data

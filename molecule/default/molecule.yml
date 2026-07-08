@@ -7,8 +7,9 @@
 # or https://github.com/geerlingguy?tab=packages&q=ansible
 # Update image names here when new platform images are published.
 #
-# debian-13 / ubuntu-2604: confirm image availability before enabling;
-# comment them back in once a published image is verified.
+# debian-13 / ubuntu-2604: images confirmed available and enabled below.
+# If a future geerlingguy image rename breaks a pull, comment the
+# platform out here rather than failing the whole matrix.
 
 dependency:
   name: galaxy

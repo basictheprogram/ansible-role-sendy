@@ -2,6 +2,8 @@
 # vars/main.yml
 # Internal role constants — not part of the public interface.
 # Do not override these in host_vars or group_vars.
-
-# Version being installed — update when the role is used for a future release.
-_sendy_upgrade_version: "7.0.2"
+#
+# This role has no constants that need to live here today. The Sendy
+# version being applied is now parsed at runtime from sendy_zip_src's
+# filename (see tasks/preflight.yml) rather than pinned here — see
+# DESIGN.md's Settled decisions.

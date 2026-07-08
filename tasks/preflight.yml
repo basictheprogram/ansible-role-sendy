@@ -3,6 +3,33 @@
 # Validate all preconditions before touching the live install.
 # Fail fast here — better to abort before any backup or file changes.
 
+- name: "Preflight | Assert supported ansible-core version"
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full is version("2.20", ">=")
+    fail_msg: >
+      sendy requires ansible-core >= 2.20
+      (running {{ ansible_version.full }}).
+    quiet: true
+
+- name: "Preflight | Assert supported OS family"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] in ['Debian', 'Ubuntu']
+    fail_msg: >
+      sendy only supports Debian and Ubuntu
+      (target reports {{ ansible_facts['distribution'] }}).
+    quiet: true
+
+- name: "Preflight | Warn on OS release outside the tested support matrix"
+  ansible.builtin.debug:
+    msg: >
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_release'] }}
+      is not one of this role's tested releases
+      (Debian bookworm/trixie, Ubuntu jammy/noble/resolute). Proceeding anyway —
+      this is a warning, not a failure.
+  when: ansible_facts['distribution_release'] not in ['bookworm', 'trixie', 'jammy', 'noble', 'resolute']
+
 - name: "Preflight | Assert required variables are set"
   ansible.builtin.assert:
     that:
@@ -28,6 +55,42 @@
       Mount the Synology share and set sendy_zip_src to the full path of the
       .zip file before running.
   when: not _sendy_zip_stat.stat.exists
+
+- name: "Preflight | Parse Sendy version from the zip filename"
+  ansible.builtin.set_fact:
+    _sendy_zip_version: "{{ sendy_zip_src | basename | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+)') }}"
+
+- name: "Preflight | Fail if no semantic version could be parsed from the zip filename"
+  ansible.builtin.fail:
+    msg: >
+      Could not parse a semantic version (X.Y.Z) from the filename
+      {{ sendy_zip_src | basename }}. Sendy releases are named like
+      sendy-7.0.6.zip — rename the file to match that pattern, or verify
+      sendy_zip_src points at a genuine Sendy release zip.
+  when: not _sendy_zip_version
+
+- name: "Preflight | Check for a version marker from a previous upgrade"
+  ansible.builtin.stat:
+    path: "{{ sendy_version_marker }}"
+  register: _sendy_version_marker_stat
+
+- name: "Preflight | Read the previous upgrade's recorded version"
+  ansible.builtin.slurp:
+    src: "{{ sendy_version_marker }}"
+  register: _sendy_version_marker_slurp
+  when: _sendy_version_marker_stat.stat.exists
+
+- name: "Preflight | Fail if the zip is older than the last upgrade"
+  ansible.builtin.fail:
+    msg: >
+      {{ sendy_zip_src | basename }} is version {{ _sendy_zip_version }},
+      which is older than {{ _sendy_version_marker_slurp.content | b64decode | trim }}
+      already recorded at {{ sendy_version_marker }}. Refusing to downgrade.
+      Set sendy_force_reupgrade: true to bypass this for testing.
+  when:
+    - not sendy_force_reupgrade
+    - _sendy_version_marker_stat.stat.exists
+    - _sendy_zip_version is version(_sendy_version_marker_slurp.content | b64decode | trim, '<')
 
 - name: "Preflight | Verify live config.php exists"
   ansible.builtin.stat:

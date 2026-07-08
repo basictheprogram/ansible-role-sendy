@@ -47,7 +47,7 @@ LIVE_UPLOAD_FILENAME: str = "live_subscriber_data.csv"
 # Files introduced in the new build that should land in the live install.
 NEW_BUILD_FILES: list[str] = [
     "includes/functions.php",
-    "locale/en_US.php",
+    "locale/en_US/LC_MESSAGES/default.po",
     "login.php",
     "index.php",
 ]
@@ -65,15 +65,10 @@ def backup_dir(host: Host) -> str:
     locates it so individual tests can reference files inside it without
     hard-coding the timestamp.
     """
-    result = host.run(
-        f"find {BACKUP_PARENT_DIR} -mindepth 1 -maxdepth 1 -type d | sort | tail -1"
-    )
-    assert result.rc == 0, (
-        f"Could not list {BACKUP_PARENT_DIR}: {result.stderr}"
-    )
+    result = host.run(f"find {BACKUP_PARENT_DIR} -mindepth 1 -maxdepth 1 -type d | sort | tail -1")
+    assert result.rc == 0, f"Could not list {BACKUP_PARENT_DIR}: {result.stderr}"
     path = result.stdout.strip()
     assert path, (
-        f"No timestamped backup directories found under {BACKUP_PARENT_DIR}. "
-        "The backup tasks may not have run."
+        f"No timestamped backup directories found under {BACKUP_PARENT_DIR}. The backup tasks may not have run."
     )
     return path

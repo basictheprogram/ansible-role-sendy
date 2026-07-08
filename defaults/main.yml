@@ -56,8 +56,23 @@ sendy_run_smoke_test: true
 
 # URL to GET. Override in host_vars with the actual Sendy URL.
 # Example: https://sendy.example.com/
+# Note: the default below is a bare IP address, which will not reach Sendy
+# on a target using name-based virtual hosting — override explicitly there.
 sendy_smoke_test_url: "http://{{ ansible_default_ipv4.address }}/"
 
 # Validate TLS certificates in the smoke test.
 # Set false when testing against a self-signed cert or plain HTTP.
 sendy_smoke_test_validate_certs: true
+
+# ── Version guard ─────────────────────────────────────────────────────────
+
+# Where this role records the Sendy version it last upgraded to (parsed
+# from sendy_zip_src's filename, e.g. sendy-7.0.6.zip -> 7.0.6). Read by
+# preflight on every run and compared against the new zip's parsed
+# version, so an older zip fails fast instead of silently downgrading.
+# Kept outside the web root so it's never web-accessible.
+sendy_version_marker: /var/lib/sendy_upgrade/version
+
+# Testing escape hatch: bypasses only the older-version guard above.
+# Leave false in production.
+sendy_force_reupgrade: false
