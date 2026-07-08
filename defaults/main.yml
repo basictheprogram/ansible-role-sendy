@@ -58,7 +58,7 @@ sendy_run_smoke_test: true
 # Example: https://sendy.example.com/
 # Note: the default below is a bare IP address, which will not reach Sendy
 # on a target using name-based virtual hosting — override explicitly there.
-sendy_smoke_test_url: "http://{{ ansible_default_ipv4.address }}/"
+sendy_smoke_test_url: "http://{{ ansible_facts.default_ipv4.address }}/"
 
 # Validate TLS certificates in the smoke test.
 # Set false when testing against a self-signed cert or plain HTTP.

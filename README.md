@@ -127,7 +127,7 @@ Full descriptions and types are also documented in `meta/argument_specs.yml`.
 | `sendy_preserve_htaccess` | `true` | Keep live `.htaccess`, discard new build's |
 | `sendy_webserver_service` | `apache2` | Service name restarted after deploy |
 | `sendy_run_smoke_test` | `true` | HTTP GET smoke test after deploy |
-| `sendy_smoke_test_url` | `http://{{ ansible_default_ipv4.address }}/` | URL to test. Override explicitly on name-based virtual hosts |
+| `sendy_smoke_test_url` | `http://{{ ansible_facts.default_ipv4.address }}/` | URL to test. Override explicitly on name-based virtual hosts |
 | `sendy_smoke_test_validate_certs` | `true` | Validate TLS in smoke test |
 | `sendy_version_marker` | `/var/lib/sendy_upgrade/version` | Where the last-upgraded version is recorded, for the downgrade guard |
 | `sendy_force_reupgrade` | `false` | Testing only. Bypasses the older-version guard |

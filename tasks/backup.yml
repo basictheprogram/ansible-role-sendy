@@ -17,7 +17,7 @@
 
 - name: "Backup | Create timestamped backup directory"
   ansible.builtin.file:
-    path: "{{ sendy_backup_dir }}/{{ ansible_date_time.iso8601_basic_short }}"
+    path: "{{ sendy_backup_dir }}/{{ ansible_facts.date_time.iso8601_basic_short }}"
     state: directory
     owner: "{{ sendy_web_user }}"
     group: "{{ sendy_web_group }}"

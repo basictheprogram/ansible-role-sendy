@@ -61,7 +61,7 @@ If a task touches one of these, leave a `# TODO(open-q):` comment:
 * **Smoke test default URL may not reach Sendy behind name-based virtual
   hosting** (found 2026-07-08 while reviewing a real production host's
   host_vars) — `sendy_smoke_test_url` defaults to
-  `http://{{ ansible_default_ipv4.address }}/`, but a target configured
+  `http://{{ ansible_facts.default_ipv4.address }}/`, but a target configured
   with named Apache vhosts (and no default vhost) will not route a
   bare-IP request with no Host header to Sendy. Always override
   `sendy_smoke_test_url` explicitly in host_vars for such targets; this

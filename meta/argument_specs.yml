@@ -64,7 +64,7 @@ argument_specs:
         description: Run an HTTP GET after deploy to confirm Sendy responds.
       sendy_smoke_test_url:
         type: str
-        default: "http://{{ ansible_default_ipv4.address }}/"
+        default: "http://{{ ansible_facts.default_ipv4.address }}/"
         description: >-
           URL to GET for the smoke test. Override with the real Sendy URL
           — the default bare-IP address will not reach Sendy on a target
