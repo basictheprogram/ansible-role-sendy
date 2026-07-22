@@ -69,10 +69,12 @@ Every changed line should trace directly to the request.
 
 Transform requests into verifiable outcomes:
 
-* "Add a preflight assertion" → task runs, `pre-commit run --all-files`
-  is clean, YAML parses without error.
-* "Fix an idempotency bug" → second playbook run reports zero changed tasks.
-* "Refactor a task file" → behavior is identical, lint is clean.
+* "Add a preflight assertion" → task runs, `molecule verify` passes,
+  `pre-commit run --all-files` is clean, YAML parses without error.
+* "Fix an idempotency bug" → second `molecule converge` (or playbook run)
+  reports zero changed tasks.
+* "Refactor a task file" → behavior is identical, `molecule verify`
+  passes, lint is clean.
 
 For multi-step changes, state a brief plan before starting:
 
@@ -185,6 +187,11 @@ commit. Stop and verify between items.
 ## Testing locally
 
 * `pre-commit run --all-files` — fast lint/format pass. Run before every commit.
+* `molecule converge` then `molecule verify` — fast iteration during
+  task work; skips the destroy/create cycle.
+* `molecule test` — full role exercise across the OS matrix
+  (Debian bookworm/trixie, Ubuntu jammy/noble/resolute). Slow; run
+  before declaring a change done.
 * `ansible-playbook upgrade_sendy.yml --check --diff` — dry-run against
   real inventory before applying changes.
 

@@ -8,19 +8,13 @@ galaxy_info:
   company: "Real Time Enterprises, Inc."
   description: >-
     Automates upgrading a self-hosted Sendy email marketing installation
-    on Ubuntu/Debian: backs up config.php, locale, and .htaccess, stages
-    the new build, applies HelloSendy's four-rule preservation procedure,
-    and syncs it into production with an optional smoke test.
+    for Debian (bookworm, trixie) and Ubuntu (jammy, noble, resolute):
+    backs up config.php, locale, and .htaccess, stages the new build,
+    applies HelloSendy's four-rule preservation procedure, and syncs it
+    into production with an optional smoke test.
   issue_tracker_url: https://github.com/basictheprogram/ansible-role-sendy/issues
   license: "MIT"
   min_ansible_version: "2.20"
-  platforms:
-    - name: Ubuntu
-      versions:
-        - all
-    - name: Debian
-      versions:
-        - all
   galaxy_tags:
     - sendy
     - email

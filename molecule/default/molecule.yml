@@ -86,7 +86,7 @@ verifier:
   directory: tests/
   options:
     v: true
-    tb: short
+    p: "no:cacheprovider"
 
 scenario:
   test_sequence:
